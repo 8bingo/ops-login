@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        padding: 24px;
+      }
+      .box {
+        max-width: 520px;
+        margin: 0 auto;
+      }
+      .err {
+        color: #b00020;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h1>ログイン</h1>
+      <p id="msg">読み込み中…</p>
+      <div id="g_id_signin"></div>
+      <pre id="err" class="err"></pre>
+    </div>
+
+    <script>
+      // ★自分のOAuthクライアントIDに差し替え
+      const CLIENT_ID = "YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com";
+
+      // return をホワイトリスト（最低限）
+      const ALLOWED_RETURN_PREFIXES = [
+        "https://script.google.com/",
+        "https://script.googleusercontent.com/",
+      ];
+
+      const params = new URLSearchParams(location.search);
+      const returnUrl = params.get("return") || "";
+
+      function isAllowedReturn(url) {
+        return ALLOWED_RETURN_PREFIXES.some((p) => url.startsWith(p));
+      }
+
+      const msg = document.getElementById("msg");
+      const err = document.getElementById("err");
+
+      if (!returnUrl) {
+        msg.textContent = "return パラメータがありません。";
+      } else if (!isAllowedReturn(returnUrl)) {
+        msg.textContent = "return が許可されていません。";
+        err.textContent = "return=" + returnUrl;
+      } else {
+        msg.textContent = "Googleでログインしてください。";
+
+        window.handleCredentialResponse = function (response) {
+          const idToken = response.credential;
+          if (!idToken) {
+            err.textContent = "IDトークンが取得できませんでした。";
+            return;
+          }
+          // URLフラグメントでGASへ返す（クエリに載せない）
+          location.replace(
+            returnUrl.split("#")[0] +
+              "#id_token=" +
+              encodeURIComponent(idToken),
+          );
+        };
+
+        google.accounts.id.initialize({
+          client_id: CLIENT_ID,
+          callback: handleCredentialResponse,
+        });
+
+        google.accounts.id.renderButton(
+          document.getElementById("g_id_signin"),
+          { theme: "outline", size: "large" },
+        );
+
+        google.accounts.id.prompt();
+      }
+    </script>
+  </body>
+</html>
