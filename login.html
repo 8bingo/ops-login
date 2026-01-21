@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Login</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" defer></script>
     <style>
       body {
         font-family:
@@ -60,31 +60,44 @@
       } else {
         msg.textContent = "Googleでログインしてください。";
 
-        window.handleCredentialResponse = function (response) {
-          const idToken = response.credential;
-          if (!idToken) {
-            err.textContent = "IDトークンが取得できませんでした。";
+        function initWhenReady() {
+          if (!(window.google && google.accounts && google.accounts.id)) {
+            setTimeout(initWhenReady, 50);
             return;
           }
-          // URLフラグメントでGASへ返す（クエリに載せない）
-          location.replace(
-            returnUrl.split("#")[0] +
-              "#id_token=" +
-              encodeURIComponent(idToken),
-          );
-        };
+          try {
+            window.handleCredentialResponse = function (response) {
+              const idToken = response.credential;
+              if (!idToken) {
+                err.textContent = "IDトークンが取得できませんでした。";
+                return;
+              }
+              // URLフラグメントでGASへ返す（クエリに載せない）
+              location.replace(
+                returnUrl.split("#")[0] +
+                  "#id_token=" +
+                  encodeURIComponent(idToken),
+              );
+            };
 
-        google.accounts.id.initialize({
-          client_id: CLIENT_ID,
-          callback: handleCredentialResponse,
-        });
+            google.accounts.id.initialize({
+              client_id: CLIENT_ID,
+              callback: handleCredentialResponse,
+            });
 
-        google.accounts.id.renderButton(
-          document.getElementById("g_id_signin"),
-          { theme: "outline", size: "large" },
-        );
+            google.accounts.id.renderButton(
+              document.getElementById("g_id_signin"),
+              { theme: "outline", size: "large" },
+            );
 
-        google.accounts.id.prompt();
+            // prompt は一旦コメントアウトでもOK（ボタン表示確認が先）
+            // google.accounts.id.prompt();
+          } catch (e) {
+            err.textContent = String(e && e.stack ? e.stack : e);
+          }
+        }
+
+        initWhenReady();
       }
     </script>
   </body>
