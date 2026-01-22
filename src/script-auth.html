@@ -1,0 +1,38 @@
+<script>
+  (function() {
+    const qs = new URLSearchParams(window.location.search);
+    // hash が落ちるケースがあるので、まずクエリ優先。保険でhashも見る。
+    const idToken =
+      qs.get("id_token") ||
+      new URLSearchParams(window.location.hash.slice(1)).get("id_token") ||
+      "";
+    const baseUrl = "<?!= baseUrl ?>";
+    const nextUrl = qs.get("next") || baseUrl;
+    const safeNext = nextUrl.startsWith(baseUrl) ? nextUrl : baseUrl;
+
+    if (!idToken) {
+      alert("ログイン情報が見つかりません。（id_tokenが受け取れませんでした）");
+      return;
+    }
+
+    // URLからトークンを消す（ログイン処理中にURLへ残さない）
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("id_token");
+      u.hash = "";
+      history.replaceState(null, "", u.toString());
+    } catch (e) {}
+
+    // IDトークンをサーバーに渡してセッション確立
+    google.script.run
+      .withSuccessHandler(function() {
+        // ログイン後、元のURLへ遷移（_top）
+        window.top.location.replace(safeNext);
+      })
+      .withFailureHandler(function(err) {
+        alert("ログインエラー: " + (err.message || err));
+        window.top.location.replace(baseUrl);
+      })
+      .rpc("auth_exchangeIdToken", idToken);
+  })();
+</script>
