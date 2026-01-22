@@ -12,6 +12,8 @@
           -apple-system,
           sans-serif;
         padding: 24px;
+        font-size: 16px;
+        line-height: 1.6;
       }
       .box {
         max-width: 520px;
@@ -20,6 +22,29 @@
       .err {
         color: #b00020;
         white-space: pre-wrap;
+      }
+      #g_id_signin {
+        transform-origin: left top;
+      }
+      @media (max-width: 600px) {
+        body {
+          padding: 32px;
+          font-size: 18px;
+        }
+        h1 {
+          font-size: 1.6rem;
+        }
+        #g_id_signin {
+          transform: scale(1.1);
+        }
+      }
+      @media (max-width: 420px) {
+        body {
+          font-size: 19px;
+        }
+        #g_id_signin {
+          transform: scale(1.18);
+        }
       }
     </style>
   </head>
