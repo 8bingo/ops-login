@@ -72,10 +72,9 @@
                 err.textContent = "IDトークンが取得できませんでした。";
                 return;
               }
-              // IDトークンは URL フラグメントで返し、クエリへは載せない
+      // IDトークンは URLクエリパラメータで返す（リダイレクト時に失われないようにする）
               const u = new URL(returnUrl);
-              u.searchParams.delete("id_token");
-              u.hash = `id_token=${encodeURIComponent(idToken)}`;
+              u.searchParams.set("id_token", idToken);
               location.replace(u.toString());
             };
 
