@@ -8,7 +8,17 @@
       "";
     const baseUrl = "<?!= baseUrl ?>";
     const nextUrl = qs.get("next") || baseUrl;
-    const safeNext = nextUrl.startsWith(baseUrl) ? nextUrl : baseUrl;
+    let safeNext = baseUrl;
+    try {
+      const base = new URL(baseUrl);
+      const candidate = new URL(nextUrl, base);
+      if (
+        candidate.origin === base.origin &&
+        candidate.pathname.startsWith(base.pathname)
+      ) {
+        safeNext = candidate.toString();
+      }
+    } catch (e) {}
 
     if (!idToken) {
       alert("ログイン情報が見つかりません。（id_tokenが受け取れませんでした）");
