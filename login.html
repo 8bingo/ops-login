@@ -2,49 +2,50 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Login</title>
     <script src="https://accounts.google.com/gsi/client" defer></script>
     <style>
+      :root { color-scheme: light dark; }
+      html, body { height: 100%; }
       body {
-        font-family:
-          system-ui,
-          -apple-system,
-          sans-serif;
-        padding: 24px;
-        font-size: 16px;
-        line-height: 1.6;
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        -webkit-text-size-adjust: 100%;
+        padding: calc(24px + env(safe-area-inset-top))
+          calc(16px + env(safe-area-inset-right))
+          calc(24px + env(safe-area-inset-bottom))
+          calc(16px + env(safe-area-inset-left));
+        background: #f6f7f9;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100svh;
       }
       .box {
-        max-width: 520px;
-        margin: 0 auto;
+        width: min(520px, 100%);
+        background: #fff;
+        border: 1px solid rgba(0,0,0,.08);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+        text-align: center;
       }
+      @media (min-height: 640px) { body { align-items: center; } }
+      h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.2; }
+      #msg { margin: 0 0 16px; font-size: 16px; line-height: 1.6; }
+      #g_id_signin { display: flex; justify-content: center; }
+      .hint { margin-top: 12px; font-size: 13px; color: rgba(0,0,0,.6); line-height: 1.5; }
       .err {
+        margin-top: 12px;
         color: #b00020;
         white-space: pre-wrap;
+        font-size: 13px;
       }
-      #g_id_signin {
-        transform-origin: left top;
-      }
-      @media (max-width: 600px) {
-        body {
-          padding: 32px;
-          font-size: 18px;
-        }
-        h1 {
-          font-size: 1.6rem;
-        }
-        #g_id_signin {
-          transform: scale(1.1);
-        }
-      }
-      @media (max-width: 420px) {
-        body {
-          font-size: 19px;
-        }
-        #g_id_signin {
-          transform: scale(1.18);
-        }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0b0f14; }
+        .box { background: #0f1620; border-color: rgba(255,255,255,.12); }
+        .hint { color: rgba(255,255,255,.65); }
       }
     </style>
   </head>
@@ -53,6 +54,7 @@
       <h1>ログイン</h1>
       <p id="msg">読み込み中…</p>
       <div id="g_id_signin"></div>
+      <div class="hint">ログイン後、自動的に元のページへ戻ります。</div>
       <pre id="err" class="err"></pre>
     </div>
 
@@ -112,10 +114,16 @@
               callback: handleCredentialResponse,
             });
 
-            google.accounts.id.renderButton(
-              document.getElementById("g_id_signin"),
-              { theme: "outline", size: "large" },
-            );
+            const signInEl = document.getElementById("g_id_signin");
+            // GSIボタンは%指定できないので、実寸pxで端末幅に追従させる
+            const boxW = document.querySelector(".box").clientWidth;
+            const btnW = Math.max(240, Math.min(420, boxW));
+            google.accounts.id.renderButton(signInEl, {
+              theme: "outline",
+              size: "large",
+              width: btnW,
+              locale: "ja",
+            });
 
             // prompt は一旦コメントアウトでもOK（ボタン表示確認が先）
             // google.accounts.id.prompt();
