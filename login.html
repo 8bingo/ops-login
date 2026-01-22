@@ -72,12 +72,11 @@
                 err.textContent = "IDトークンが取得できませんでした。";
                 return;
               }
-              // URLフラグメントでGASへ返す（クエリに載せない）
-              location.replace(
-                returnUrl.split("#")[0] +
-                  "#id_token=" +
-                  encodeURIComponent(idToken),
-              );
+              // Apps Script のリダイレクトで hash(#) が落ちることがあるので、クエリに載せて返す
+              const u = new URL(returnUrl);
+              u.hash = "";
+              u.searchParams.set("id_token", idToken);
+              location.replace(u.toString());
             };
 
             google.accounts.id.initialize({
