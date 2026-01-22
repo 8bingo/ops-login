@@ -72,8 +72,12 @@
                 err.textContent = "IDトークンが取得できませんでした。";
                 return;
               }
-      // IDトークンは URLクエリパラメータで返す（リダイレクト時に失われないようにする）
+              // Apps Script WebApp は script.google.com のラッパー/iframe を経由するため
+              // hash(#...) が inner iframe 側へ引き継がれず id_token が落ちることがある。
+              // そのため id_token はクエリで渡す（到着後すぐにGAS側でURLから削除する）。
               const u = new URL(returnUrl);
+              u.hash = ""; // 念のため
+              u.searchParams.delete("id_token");
               u.searchParams.set("id_token", idToken);
               location.replace(u.toString());
             };
