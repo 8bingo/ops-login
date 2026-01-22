@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Script Auth</title>
+  </head>
+  <body>
+    <script>
+      const RETRY_MAX = 3;
+
+      function removeIdTokenFromUrl(nextPage, nextQuery) {
+        try {
+          if (
+            window.google &&
+            google.script &&
+            google.script.history &&
+            google.script.history.replace
+          ) {
+            const clean = { page: "auth" };
+            if (nextPage) clean.next = nextPage;
+            if (nextQuery) clean.nextQuery = nextQuery;
+            google.script.history.replace(null, clean, "");
+          }
+        } catch (e) {
+          if (window.history && window.history.replaceState) {
+            const u = new URL(window.location.href);
+            u.searchParams.delete("id_token");
+            window.history.replaceState(null, "", u.toString());
+          }
+        }
+      }
+
+      void RETRY_MAX;
+      void removeIdTokenFromUrl;
+    </script>
+  </body>
+</html>
