@@ -72,12 +72,11 @@
                 err.textContent = "IDトークンが取得できませんでした。";
                 return;
               }
-              // URLフラグメントでGASへ返す（クエリに載せない）
-              location.replace(
-                returnUrl.split("#")[0] +
-                  "#id_token=" +
-                  encodeURIComponent(idToken),
-              );
+              // IDトークンは URL フラグメントで返し、クエリへは載せない
+              const u = new URL(returnUrl);
+              u.searchParams.delete("id_token");
+              u.hash = `id_token=${encodeURIComponent(idToken)}`;
+              location.replace(u.toString());
             };
 
             google.accounts.id.initialize({
