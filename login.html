@@ -72,10 +72,10 @@
                 err.textContent = "IDトークンが取得できませんでした。";
                 return;
               }
-              // Apps Script のリダイレクトで hash(#) が落ちることがあるので、クエリに載せて返す
+              // IDトークンは URL フラグメントで返し、クエリへは載せない
               const u = new URL(returnUrl);
-              u.hash = "";
-              u.searchParams.set("id_token", idToken);
+              u.searchParams.delete("id_token");
+              u.hash = `id_token=${encodeURIComponent(idToken)}`;
               location.replace(u.toString());
             };
 
