@@ -61,17 +61,61 @@
       const CLIENT_ID =
         "751076521932-rbmj256c9be0p0jq45n1btido0pkv7t8.apps.googleusercontent.com";
 
-      // return をホワイトリスト（最低限）
-      const ALLOWED_RETURN_PREFIXES = [
-        "https://script.google.com/",
-        "https://script.googleusercontent.com/",
-      ];
+      /**
+       * return の許可リスト（最小・最強）
+       * - "あなたの WebApp の /exec" に完全一致するものだけ許可
+       * - かつ page=auth を必須
+       *
+       * 例:
+       *   https://script.google.com/macros/s/AKfycbXXXXXXXXXXXX/exec
+       *
+       * ⚠ 新しいデプロイを作ってURLが変わる運用だと、ここも更新が必要になる。
+       *    できれば「既存デプロイを編集（URL固定）」で運用するのが安全。
+       */
+      const ALLOWED_EXEC_BASE_URLS = new Set([
+        // TODO: あなたの本番 /exec
+        "https://script.google.com/macros/s/AKfycbwH35heJuJrxDdtGTZ8ri_Frg-1pCJnNbzoQIyFvGVo-p4uuy5SyKRet7IzDlfx86f0/exec",
+        // TODO: 開発があるなら追加
+        // "https://script.google.com/macros/s/AKfycbyJPnsBEgF1HvcWi4yA-D5FOhISvujShjltbkL8tJdzsTf4VXi7Y39llPUocKPbddoa/exec",
+      ]);
 
       const params = new URLSearchParams(location.search);
       const returnUrl = params.get("return") || "";
 
-      function isAllowedReturn(url) {
-        return ALLOWED_RETURN_PREFIXES.some((p) => url.startsWith(p));
+      function isAllowedReturn(raw) {
+        let u;
+        try {
+          u = new URL(raw);
+        } catch {
+          return false;
+        }
+
+        // https 以外は拒否
+        if (u.protocol !== "https:") return false;
+
+        // 許可する origin は script.google.com のみ（広げない）
+        if (u.origin !== "https://script.google.com") return false;
+
+        // /exec のベースURLが許可リストに完全一致すること
+        const execBase = `${u.origin}${u.pathname}`;
+        if (!ALLOWED_EXEC_BASE_URLS.has(execBase)) return false;
+
+        // return 先は auth ページだけ許可
+        if (u.searchParams.get("page") !== "auth") return false;
+
+        // login.html が付与するので、return 自体に id_token が入っていたら拒否
+        if (u.searchParams.has("id_token")) return false;
+
+        // 余計なクエリを混ぜられないようにキーを制限（必要ならここで追加）
+        const allowedKeys = new Set(["page", "next", "nextQuery"]);
+        for (const k of u.searchParams.keys()) {
+          if (!allowedKeys.has(k)) return false;
+        }
+
+        // hash が付いていたら拒否（意図しない遷移に使える）
+        if (u.hash) return false;
+
+        return true;
       }
 
       const msg = document.getElementById("msg");
