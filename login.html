@@ -23,6 +23,30 @@
         color: #b00020;
         white-space: pre-wrap;
       }
+      .status {
+        display: none;
+        text-align: center;
+        margin-top: 24px;
+      }
+      .status.show {
+        display: block;
+      }
+      .spinner {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border: 3px solid #e0e0e0;
+        border-top-color: #1a73e8;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
       #g_id_signin {
         transform-origin: left top;
       }
@@ -53,37 +77,85 @@
       <h1>ログイン</h1>
       <p id="msg">読み込み中…</p>
       <div id="g_id_signin"></div>
+      <div id="status" class="status">
+        <span class="spinner"></span>ログイン処理中…お待ちください。
+      </div>
       <pre id="err" class="err"></pre>
     </div>
 
+    <!-- GAS へ id_token を POST するための hidden form -->
+    <form id="authForm" method="POST" style="display: none">
+      <input type="hidden" name="id_token" id="f_id_token" />
+      <input type="hidden" name="next" id="f_next" />
+      <input type="hidden" name="nextQuery" id="f_nextQuery" />
+    </form>
+
     <script>
-      // ★自分のOAuthクライアントIDに差し替え
-      const CLIENT_ID =
+      // OAuth クライアント ID
+      var CLIENT_ID =
         "751076521932-rbmj256c9be0p0jq45n1btido0pkv7t8.apps.googleusercontent.com";
 
-      // return をホワイトリスト（最低限）
-      const ALLOWED_RETURN_PREFIXES = [
+      // return をホワイトリスト
+      var ALLOWED_RETURN_PREFIXES = [
         "https://script.google.com/",
         "https://script.googleusercontent.com/",
       ];
 
-      const params = new URLSearchParams(location.search);
-      const returnUrl = params.get("return") || "";
+      var params = new URLSearchParams(location.search);
+      var returnUrl = params.get("return") || "";
 
       function isAllowedReturn(url) {
-        return ALLOWED_RETURN_PREFIXES.some((p) => url.startsWith(p));
+        return ALLOWED_RETURN_PREFIXES.some(function (p) {
+          return url.indexOf(p) === 0;
+        });
       }
 
-      const msg = document.getElementById("msg");
-      const err = document.getElementById("err");
+      var msgEl = document.getElementById("msg");
+      var errEl = document.getElementById("err");
+      var statusEl = document.getElementById("status");
+      var signinEl = document.getElementById("g_id_signin");
 
       if (!returnUrl) {
-        msg.textContent = "return パラメータがありません。";
+        msgEl.textContent = "return パラメータがありません。";
       } else if (!isAllowedReturn(returnUrl)) {
-        msg.textContent = "return が許可されていません。";
-        err.textContent = "return=" + returnUrl;
+        msgEl.textContent = "return が許可されていません。";
+        errEl.textContent = "return=" + returnUrl;
       } else {
-        msg.textContent = "Googleでログインしてください。";
+        // return URL から GAS ベース URL と遷移先情報を抽出
+        var gasBaseUrl = "";
+        var nextPage = "";
+        var nextQuery = "";
+        try {
+          var returnUrlObj = new URL(returnUrl);
+          gasBaseUrl = returnUrlObj.origin + returnUrlObj.pathname;
+          nextPage = returnUrlObj.searchParams.get("next") || "";
+          nextQuery = returnUrlObj.searchParams.get("nextQuery") || "";
+        } catch (e) {
+          gasBaseUrl = returnUrl.split("?")[0];
+        }
+
+        msgEl.textContent = "Googleでログインしてください。";
+
+        function handleCredentialResponse(response) {
+          var idToken = response.credential;
+          if (!idToken) {
+            errEl.textContent = "IDトークンが取得できませんでした。";
+            return;
+          }
+
+          // ローディング表示に切り替え
+          msgEl.style.display = "none";
+          signinEl.style.display = "none";
+          statusEl.className = "status show";
+
+          // form POST で id_token を GAS に送信（URL に巨大な JWT を載せない）
+          var form = document.getElementById("authForm");
+          form.action = gasBaseUrl;
+          document.getElementById("f_id_token").value = idToken;
+          document.getElementById("f_next").value = nextPage;
+          document.getElementById("f_nextQuery").value = nextQuery;
+          form.submit();
+        }
 
         function initWhenReady() {
           if (!(window.google && google.accounts && google.accounts.id)) {
@@ -91,22 +163,6 @@
             return;
           }
           try {
-            window.handleCredentialResponse = function (response) {
-              const idToken = response.credential;
-              if (!idToken) {
-                err.textContent = "IDトークンが取得できませんでした。";
-                return;
-              }
-              // Apps Script WebApp は script.google.com のラッパー/iframe を経由するため
-              // hash(#...) が inner iframe 側へ引き継がれず id_token が落ちることがある。
-              // そのため id_token はクエリで渡す（到着後すぐにGAS側でURLから削除する）。
-              const u = new URL(returnUrl);
-              u.hash = ""; // 念のため
-              u.searchParams.delete("id_token");
-              u.searchParams.set("id_token", idToken);
-              location.replace(u.toString());
-            };
-
             google.accounts.id.initialize({
               client_id: CLIENT_ID,
               callback: handleCredentialResponse,
@@ -117,10 +173,10 @@
               { theme: "outline", size: "large" },
             );
 
-            // prompt は一旦コメントアウトでもOK（ボタン表示確認が先）
-            // google.accounts.id.prompt();
+            // One Tap: ログイン済みセッションがあれば自動でプロンプト表示
+            google.accounts.id.prompt();
           } catch (e) {
-            err.textContent = String(e && e.stack ? e.stack : e);
+            errEl.textContent = String(e && e.stack ? e.stack : e);
           }
         }
 
